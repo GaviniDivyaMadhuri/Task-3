@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tic-Tac-Toe</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+
+  <style>
+    body {
+      background-color: #000000; /* Black background */
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      color: #0d6efd; /* Bright Blue text */
+    }
+
+    h1 {
+      font-size: 3.5rem;
+      font-weight: 600;
+      color: #0d6efd;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px #0d6efd;
+    }
+
+    #controls {
+      margin-bottom: 20px;
+    }
+
+    label[for="mode"] {
+      font-weight: 600;
+      font-size: 18px;
+      color: #0d6efd;
+      margin-right: 8px;
+    }
+
+    select, button {
+      background-color: #0d6efd;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 5px;
+      padding: 6px 12px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    select:focus, button:hover {
+      background-color: #0844c8;
+      outline: none;
+    }
+
+    #game {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 6px;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      background: #121f3d; /* Dark blue cell */
+      border: 3px solid #0d6efd;
+      font-size: 64px;
+      text-align: center;
+      line-height: 100px;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 700;
+      border-radius: 10px;
+      color: #0d6efd;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .cell:hover:not(.disabled) {
+      background: #1a2a63; /* Slightly lighter dark blue on hover */
+    }
+
+    .cell.disabled {
+      cursor: default;
+    }
+
+    #message {
+      margin: 20px 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #0d6efd;
+      text-shadow: 0 0 5px #0d6efd;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Tic-Tac-Toe</h1>
+
+  <div id="controls">
+    <label for="mode">Choose Mode:</label>
+    <select id="mode">
+      <option value="2p">Two Players</option>
+      <option value="computer">Play vs Computer</option>
+    </select>
+    <button id="restart">Restart Game</button>
+  </div>
+
+  <div id="game"></div>
+
+  <div id="message"></div>
+
+  <script>
+    const gameEl = document.getElementById('game');
+    const messageEl = document.getElementById('message');
+    const restartBtn = document.getElementById('restart');
+    const modeSelect = document.getElementById('mode');
+
+    let board = Array(9).fill(null);
+    let currentPlayer = 'X';
+    let gameOver = false;
+    let mode = '2p';
+
+    const winningCombos = [
+      [0,1,2], [3,4,5], [6,7,8],
+      [0,3,6], [1,4,7], [2,5,8],
+      [0,4,8], [2,4,6]
+    ];
+
+    function createBoard() {
+      gameEl.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.index = i;
+        cell.addEventListener('click', onCellClick);
+        gameEl.appendChild(cell);
+      }
+    }
+
+    function onCellClick(e) {
+      const idx = e.target.dataset.index;
+      if (gameOver || board[idx]) return;
+
+      makeMove(idx, currentPlayer);
+
+      if (checkWin(currentPlayer)) {
+        endGame(`${currentPlayer} wins! 🎉`);
+        return;
+      }
+
+      if (board.every(cell => cell !== null)) {
+        endGame("It's a tie! 🤝");
+        return;
+      }
+
+      switchPlayer();
+
+      if (mode === 'computer' && currentPlayer === 'O' && !gameOver) {
+        setTimeout(computerMove, 500);
+      }
+    }
+
+    function makeMove(idx, player) {
+      board[idx] = player;
+      const cell = gameEl.querySelector(`.cell[data-index='${idx}']`);
+      cell.textContent = player;
+      cell.classList.add('disabled');
+    }
+
+    function switchPlayer() {
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      messageEl.textContent = `Current Turn: ${currentPlayer}`;
+    }
+
+    function checkWin(player) {
+      return winningCombos.some(combo =>
+        combo.every(i => board[i] === player)
+      );
+    }
+
+    function endGame(msg) {
+      gameOver = true;
+      messageEl.textContent = msg;
+    }
+
+    function computerMove() {
+      let emptyIndices = board
+        .map((v, i) => v === null ? i : null)
+        .filter(i => i !== null);
+
+      if (emptyIndices.length === 0) return;
+
+      let move = findBestMove('O') || findBestMove('X') || emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+
+      makeMove(move, 'O');
+
+      if (checkWin('O')) {
+        endGame('O wins! 🎉');
+        return;
+      }
+
+      if (board.every(cell => cell !== null)) {
+        endGame("It's a tie! 🤝");
+        return;
+      }
+
+      switchPlayer();
+    }
+
+    function findBestMove(player) {
+      for (let i = 0; i < 9; i++) {
+        if (board[i] === null) {
+          board[i] = player;
+          if (checkWin(player)) {
+            board[i] = null;
+            return i;
+          }
+          board[i] = null;
+        }
+      }
+      return null;
+    }
+
+    function restartGame() {
+      board = Array(9).fill(null);
+      currentPlayer = 'X';
+      gameOver = false;
+      messageEl.textContent = `Current Turn: ${currentPlayer}`;
+      createBoard();
+    }
+
+    modeSelect.addEventListener('change', e => {
+      mode = e.target.value;
+      restartGame();
+    });
+
+    restartBtn.addEventListener('click', restartGame);
+
+    createBoard();
+    messageEl.textContent = `Current Turn: ${currentPlayer}`;
+  </script>
+
+</body>
+</html>
